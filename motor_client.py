@@ -56,8 +56,8 @@ class MotorControlApp(QMainWindow):
         self.actual_torque_data = np.zeros(self.data_length)
         
         # 物理参数
-        self.L = 0.5  # 摆臂长度 (m)
-        self.m_dumbell = 1.0  # 哑铃质量 (kg)
+        self.L = 0.45  # 哑铃力臂长度 (m)
+        self.m_dumbell = 10.0  # 哑铃质量 (kg)
         self.m_arm = 3.0  # 摆臂质量 (kg)
         self.g = 9.81  # 重力加速度 (m/s²)
         
@@ -104,35 +104,35 @@ class MotorControlApp(QMainWindow):
         connection_group.setLayout(connection_layout)
         control_layout.addWidget(connection_group)
         
-        # 位置与速度控制
-        pos_vel_group = QGroupBox("位置与速度控制")
-        pos_vel_layout = QGridLayout()
+        # # 位置与速度控制
+        # pos_vel_group = QGroupBox("位置与速度控制")
+        # pos_vel_layout = QGridLayout()
 
-        self.spin_pos_vel_pos = QDoubleSpinBox()
-        self.spin_pos_vel_pos.setRange(-360.0, 360.0)
-        self.spin_pos_vel_pos.setSingleStep(1.0)
-        self.spin_pos_vel_pos.setValue(0.0)
-        self.spin_pos_vel_pos.setStyleSheet("color: white;")
-        self.spin_pos_vel_pos.valueChanged.connect(self.update_target_pos_from_pos_vel)
+        # self.spin_pos_vel_pos = QDoubleSpinBox()
+        # self.spin_pos_vel_pos.setRange(-360.0, 360.0)
+        # self.spin_pos_vel_pos.setSingleStep(1.0)
+        # self.spin_pos_vel_pos.setValue(0.0)
+        # self.spin_pos_vel_pos.setStyleSheet("color: white;")
+        # self.spin_pos_vel_pos.valueChanged.connect(self.update_target_pos_from_pos_vel)
 
-        self.spin_pos_vel_velocity = QDoubleSpinBox() 
-        self.spin_pos_vel_velocity.setRange(0.0, 90.0)
-        self.spin_pos_vel_velocity.setSingleStep(0.1)
-        self.spin_pos_vel_velocity.setValue(1.0)
-        self.spin_pos_vel_velocity.setStyleSheet("color: white;")
+        # self.spin_pos_vel_velocity = QDoubleSpinBox() 
+        # self.spin_pos_vel_velocity.setRange(0.0, 90.0)
+        # self.spin_pos_vel_velocity.setSingleStep(0.1)
+        # self.spin_pos_vel_velocity.setValue(1.0)
+        # self.spin_pos_vel_velocity.setStyleSheet("color: white;")
 
-        self.btn_pos_vel = QPushButton("执行位置与速度控制")
-        self.btn_pos_vel.setStyleSheet("background-color: #9C27B0; color: white; font-size: 12px; padding: 5px;")
-        self.btn_pos_vel.clicked.connect(self.on_pos_vel_clicked)
+        # self.btn_pos_vel = QPushButton("执行位置与速度控制")
+        # self.btn_pos_vel.setStyleSheet("background-color: #9C27B0; color: white; font-size: 12px; padding: 5px;")
+        # self.btn_pos_vel.clicked.connect(self.on_pos_vel_clicked)
 
-        pos_vel_layout.addWidget(QLabel("目标位置 (deg):"), 0, 0)
-        pos_vel_layout.addWidget(self.spin_pos_vel_pos, 0, 1)
-        pos_vel_layout.addWidget(QLabel("目标速度 (deg/s):"), 1, 0)
-        pos_vel_layout.addWidget(self.spin_pos_vel_velocity, 1, 1)
-        pos_vel_layout.addWidget(self.btn_pos_vel, 2, 0, 1, 2)
+        # pos_vel_layout.addWidget(QLabel("目标位置 (deg):"), 0, 0)
+        # pos_vel_layout.addWidget(self.spin_pos_vel_pos, 0, 1)
+        # pos_vel_layout.addWidget(QLabel("目标速度 (deg/s):"), 1, 0)
+        # pos_vel_layout.addWidget(self.spin_pos_vel_velocity, 1, 1)
+        # pos_vel_layout.addWidget(self.btn_pos_vel, 2, 0, 1, 2)
 
-        pos_vel_group.setLayout(pos_vel_layout)
-        control_layout.addWidget(pos_vel_group)
+        # pos_vel_group.setLayout(pos_vel_layout)
+        # control_layout.addWidget(pos_vel_group)
         
         # 实时数据显示
         data_group = QGroupBox("实时数据")
@@ -154,25 +154,26 @@ class MotorControlApp(QMainWindow):
         
         # 添加标签到布局
         data_layout.addWidget(self.lbl_torque)
-        data_layout.addWidget(self.lbl_target_torque)
+        data_layout.addWidget(self.lbl_max_torque)
+        data_layout.addWidget(self.lbl_actual_torque)
+        # data_layout.addWidget(self.lbl_target_torque)
         data_layout.addWidget(self.lbl_pos)
         data_layout.addWidget(self.lbl_target_pos)
         data_layout.addWidget(self.lbl_vel)
         data_layout.addWidget(self.lbl_target_vel)
-        data_layout.addWidget(self.lbl_max_torque)
-        data_layout.addWidget(self.lbl_actual_torque)
+        
 
         # 添加清零按钮
         self.btn_reset_max_torque = QPushButton("电机反馈扭矩最大值清零")
-        self.btn_reset_max_torque.setStyleSheet("background-color: #2196F3; color: white; font-size: 12px; padding: 5px;")
+        self.btn_reset_max_torque.setStyleSheet("background-color: #0029A5; color: white; font-size: 12px; padding: 5px;")
         self.btn_reset_max_torque.clicked.connect(self.reset_max_torque)
         data_layout.addWidget(self.btn_reset_max_torque)
         
-        # 添加当前位置归零按钮
-        self.btn_zero_pos = QPushButton("当前位置置零(需在电机失能状态下使用)")
-        self.btn_zero_pos.setStyleSheet("background-color: #FF9800; color: white; font-size: 12px; padding: 5px;")
-        self.btn_zero_pos.clicked.connect(self.set_zero_position)
-        data_layout.addWidget(self.btn_zero_pos)
+        # # 添加当前位置归零按钮
+        # self.btn_zero_pos = QPushButton("当前位置置零(需在电机失能状态下使用)")
+        # self.btn_zero_pos.setStyleSheet("background-color: #FF9800; color: white; font-size: 12px; padding: 5px;")
+        # self.btn_zero_pos.clicked.connect(self.set_zero_position)
+        # data_layout.addWidget(self.btn_zero_pos)
         
         # 添加哑铃重量输入框
         dumbell_layout = QHBoxLayout()
@@ -189,9 +190,14 @@ class MotorControlApp(QMainWindow):
         data_group.setLayout(data_layout)
         control_layout.addWidget(data_group)
 
+        # #电机失能按钮
+        # self.btn_disable_motor = QPushButton("电机失能")
+        # self.btn_disable_motor.setStyleSheet("background-color: #D90000; color: white; font-size: 12px; padding: 5px;")
+        # self.btn_disable_motor.clicked.connect(self.motor_disable)
+        # control_layout.addWidget(self.btn_disable_motor)
 
         #一键测试功能组
-        test_group = QGroupBox("一键测试")
+        test_group = QGroupBox("点击开始测试:测试前确保周围人员安全")
         test_layout = QGridLayout()
 
         self.btn_test = QPushButton("一键测试")
@@ -218,7 +224,7 @@ class MotorControlApp(QMainWindow):
         self.torque_plot.addLegend()
         
         self.curve_torque = self.torque_plot.plot(pen='y', name='电机反馈扭矩')
-        self.curve_target_torque = self.torque_plot.plot(pen='r', name='目标电机反馈扭矩')
+        # self.curve_target_torque = self.torque_plot.plot(pen='r', name='目标电机反馈扭矩')
         
         # 位置图表
         self.pos_plot = pg.PlotWidget(title="位置曲线")
@@ -336,6 +342,8 @@ class MotorControlApp(QMainWindow):
             try:
                 cmd = f"POS_WITH_VEL {pos} {torque} {velocity}\n"
                 self.sock.sendall(cmd.encode('utf-8'))
+                self.target_pos += pos  # 更新图表显示的目标位置
+                self.target_vel = velocity  # 更新目标速度
                 print(f"Sent position with velocity command: pos={pos}, torque={torque}, velocity={velocity}")
             except Exception as e:
                 print(f"发送失败: {e}")
@@ -346,15 +354,15 @@ class MotorControlApp(QMainWindow):
     def on_pos_vel_clicked(self):
         """处理位置与速度控制按钮点击事件"""
         # 使用当前输入增量进行控制，并在图表中叠加显示目标位置
-        pos_increment = self.pos_vel_pos_input
-        velocity = self.spin_pos_vel_velocity.value()
+        # pos_increment = self.pos_vel_pos_input
+        # velocity = self.spin_pos_vel_velocity.value()
 
-        # 图表中目标位置累加显示（增量变化）
-        self.target_pos += pos_increment
+        # # 图表中目标位置累加显示（增量变化）
+        # self.target_pos += pos_increment
 
-        # 控制命令使用增量，避免每次叠加叠加导致过度移动
-        self.target_vel = velocity
-        self.position_with_velocity(pos_increment, self.target_torque, velocity)
+        # # 控制命令使用增量，避免每次叠加叠加导致过度移动
+        # self.target_vel = velocity
+        # self.position_with_velocity(pos_increment, self.target_torque, velocity)
 
         # 只在实际完成时归零，由 receive_data 处理
         # self.target_vel = 0.0
@@ -383,13 +391,14 @@ class MotorControlApp(QMainWindow):
         self.motor_disable()
         self.set_zero_position()
 
+        
         # 0.2s 后开始位置清零动作完成后继续执行
         QTimer.singleShot(200, lambda: self.position_with_velocity(360.0, 0.0, 36.0))
         # 13s 后执行第二次位置命令
         QTimer.singleShot(13000, lambda: self.position_with_velocity(-360.0, 0.0, 36.0))
         # 再过13s 失能电机
-        QTimer.singleShot(26000, self.motor_disable)
-
+        QTimer.singleShot(26000, self.motor_disable)    
+    
 
     # --- 新增：receive_data 方法 ---
     def receive_data(self):
@@ -461,7 +470,7 @@ class MotorControlApp(QMainWindow):
 
             # 计算速度（deg/s）
             dt = 0.1  # update_data 每100ms调用一次
-            self.current_vel_val = (self.current_pos_val - self.last_pos_val) / dt
+            self.current_vel_val = abs((self.current_pos_val - self.last_pos_val) / dt) #当前速度的绝对值
             self.last_pos_val = self.current_pos_val
             self.vel_data = np.roll(self.vel_data, -1)
             self.vel_data[-1] = self.current_vel_val
@@ -475,12 +484,12 @@ class MotorControlApp(QMainWindow):
             self.actual_torque_data = np.roll(self.actual_torque_data, -1)
             # 计算实际扭矩：考虑哑铃和摆臂重量的重力扭矩
             theta_rad = self.current_pos_val * np.pi / 180  # 角度转弧度
-            self.actual_torque_val = (self.m_dumbell * self.L + self.m_arm * self.L / 2) * self.g * np.sin(theta_rad)
+            self.actual_torque_val = (self.m_dumbell * self.L + self.m_arm * 0.5 / 2) * self.g * np.sin(theta_rad)
             self.actual_torque_data[-1] = self.actual_torque_val
             
             # 更新图表
             self.curve_torque.setData(self.torque_data)
-            self.curve_target_torque.setData(self.target_torque_data)
+            # self.curve_target_torque.setData(self.target_torque_data)
             self.curve_pos.setData(self.pos_data)
             self.curve_target_pos.setData(self.target_pos_data)
             self.curve_vel.setData(self.vel_data)

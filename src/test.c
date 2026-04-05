@@ -1234,20 +1234,20 @@ int position_with_velocity(int argc, char *argv[])
         
         // 打印位置信息（当位置变化超过0.01rad时）
         if (fabs(g_motor[0].state.p - last_pos) > 0.01) {
-            printf("p_des: %.3f, Current Position: %.3f, Torque: %.3f, Current_Torque: %.3f\n", 
-                   g_motor[0].control.p_des / 3.1415926f * 180.0f, 
-                   g_motor[0].state.p / 3.1415926f * 180.0f, 
-                   g_motor[0].control.t_ff, 
-                   g_motor[0].state.t);
+            // printf("p_des: %.3f, Current Position: %.3f, Torque: %.3f, Current_Torque: %.3f\n", 
+            //        g_motor[0].control.p_des / 3.1415926f * 180.0f, 
+            //        g_motor[0].state.p / 3.1415926f * 180.0f, 
+            //        g_motor[0].control.t_ff, 
+            //        g_motor[0].state.t);
             last_pos = g_motor[0].state.p;
         }
         
+
         // 检查是否已经到达目标位置（允许一定误差）
         if (fabs(g_motor[0].state.p - (start_pos + target_pos)) < 0.01 && elapsed_time >= total_time) {
             printf("Target position reached!\n");
             break;
         }
-
         
         usleep(1000 * 1); // 1ms更新一次
     }
