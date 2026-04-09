@@ -1,0 +1,7 @@
+numpy==2.4.4
+PyQt5==5.15.11
+pyqt5_sip==12.18.0
+pyqtgraph==0.14.0
+
+#执行该命令安装依赖包
+#pip install -r requirements.txt
