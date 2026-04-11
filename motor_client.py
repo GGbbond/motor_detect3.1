@@ -73,6 +73,9 @@ class MotorControlApp(QMainWindow):
         self.rx_timer = QTimer()
         self.rx_timer.timeout.connect(self.receive_data)
         # ---------------------------
+
+        self.current_max_torque_btn = None  # 当前选中的max_torque按钮
+
         
     def init_ui(self):
         self.setWindowTitle('电机控制系统')
@@ -190,11 +193,51 @@ class MotorControlApp(QMainWindow):
         data_group.setLayout(data_layout)
         control_layout.addWidget(data_group)
 
+        # #添加力臂长度输入框
+        # arm_layout = QHBoxLayout()
+        # arm_layout.addWidget(QLabel("力臂长度 (m):"))
+        # self.spin_arm_length = QDoubleSpinBox()
+        # self.spin_arm_length.setRange(0.1, 1.0)
+        # self.spin_arm_length.setSingleStep(0.01)
+        # self.spin_arm_length.setValue(self.L)  # 使用默认值
+        # self.spin_arm_length.setStyleSheet("color: white;")
+        # self.spin_arm_length.valueChanged.connect(self.update_arm_length)
+        # arm_layout.addWidget(self.spin_arm_length)
+
         # #电机失能按钮
         # self.btn_disable_motor = QPushButton("电机失能")
         # self.btn_disable_motor.setStyleSheet("background-color: #D90000; color: white; font-size: 12px; padding: 5px;")
         # self.btn_disable_motor.clicked.connect(self.motor_disable)
         # control_layout.addWidget(self.btn_disable_motor)
+
+        # max_torque设置功能组
+        max_torque_group = QGroupBox("Max Torque设置")
+        max_torque_layout = QGridLayout()
+
+        self.btn_max_torque_1 = QPushButton("50电机: 40 N·m")
+        self.btn_max_torque_1.setStyleSheet("background-color: #2196F3; color: white; font-size: 12px; padding: 5px;")
+        self.btn_max_torque_1.clicked.connect(lambda: self.set_max_torque(40.0, self.btn_max_torque_1))
+
+        self.btn_max_torque_2 = QPushButton("50加长电机: 40 N·m")
+        self.btn_max_torque_2.setStyleSheet("background-color: #2196F3; color: white; font-size: 12px; padding: 5px;")
+        self.btn_max_torque_2.clicked.connect(lambda: self.set_max_torque(40.0, self.btn_max_torque_2))
+
+        self.btn_max_torque_3 = QPushButton("70电机: 80 N·m")
+        self.btn_max_torque_3.setStyleSheet("background-color: #2196F3; color: white; font-size: 12px; padding: 5px;")
+        self.btn_max_torque_3.clicked.connect(lambda: self.set_max_torque(80.0, self.btn_max_torque_3))
+
+        self.btn_max_torque_4 = QPushButton("85电机: 160 N·m")
+        self.btn_max_torque_4.setStyleSheet("background-color: #2196F3; color: white; font-size: 12px; padding: 5px;")
+        self.btn_max_torque_4.clicked.connect(lambda: self.set_max_torque(160.0, self.btn_max_torque_4))
+
+        max_torque_layout.addWidget(self.btn_max_torque_1, 0, 0)
+        max_torque_layout.addWidget(self.btn_max_torque_2, 0, 1)
+        max_torque_layout.addWidget(self.btn_max_torque_3, 1, 0)
+        max_torque_layout.addWidget(self.btn_max_torque_4, 1, 1)
+
+        max_torque_group.setLayout(max_torque_layout)
+        control_layout.addWidget(max_torque_group)
+
 
         #一键测试功能组
         test_group = QGroupBox("点击开始测试:测试前确保周围人员安全")
@@ -391,6 +434,10 @@ class MotorControlApp(QMainWindow):
         self.motor_disable()
         self.set_zero_position()
 
+        #如果电机位置绝对值大于一度，退出程序
+        if abs(self.current_pos_val) > 1.0:
+            print("电机位置未置零，测试中止")
+            return
         
         # 0.2s 后开始位置清零动作完成后继续执行
         QTimer.singleShot(200, lambda: self.position_with_velocity(360.0, 0.0, 36.0))
@@ -398,6 +445,26 @@ class MotorControlApp(QMainWindow):
         QTimer.singleShot(13000, lambda: self.position_with_velocity(-360.0, 0.0, 36.0))
         # 再过13s 失能电机
         QTimer.singleShot(26000, self.motor_disable)    
+
+
+    #设置max_torque方法
+    def set_max_torque(self, value, btn):
+        """设置电机的最大扭矩"""
+        # 如果之前有选中的按钮，恢复其样式
+        if self.current_max_torque_btn:
+            self.current_max_torque_btn.setStyleSheet("background-color: #2196F3; color: white; font-size: 12px; padding: 5px;")
+        
+        # 设置新按钮为选中状态
+        btn.setStyleSheet("background-color: #0D47A1; color: white; font-size: 12px; padding: 5px; border: 2px solid #FFD700;")
+        self.current_max_torque_btn = btn
+        if self.is_connected and self.sock:
+            try:
+                cmd = f"SET_MAX_TORQUE {value}\n"
+                self.sock.sendall(cmd.encode('utf-8'))
+                print(f"Sent set max torque command: {value} N·m")
+            except Exception as e:
+                print(f"发送失败: {e}")
+                self.disconnect()
     
 
     # --- 新增：receive_data 方法 ---
@@ -430,6 +497,12 @@ class MotorControlApp(QMainWindow):
                         elif line.startswith("POS_WITH_VEL_COMPLETE"):
                             print("Position with velocity command completed")
                             self.target_vel = 0.0  # 目标速度归零
+                        elif line.startswith("MAX_TORQUE_SET"):
+                            parts = line.split()
+                            if len(parts) == 2:
+                                val = float(parts[1])
+                                print(f"Max torque set to {val} N·m")
+
             except BlockingIOError:
                 pass
         except Exception as e:

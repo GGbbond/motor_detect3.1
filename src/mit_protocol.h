@@ -79,13 +79,13 @@
 
 /*
 
-//�����ؽ�   
+//锟斤拷锟斤拷锟截斤拷   
 hip yaw
 hip roll
 hip pitch
 kenn pitch
 
-// �����ؽ�
+// 锟斤拷锟斤拷锟截斤拷
 skin spring
 hell spring
 

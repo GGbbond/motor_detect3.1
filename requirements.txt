@@ -1,4 +1,4 @@
-numpy==2.4.4
+numpy==2.2.6
 PyQt5==5.15.11
 pyqt5_sip==12.18.0
 pyqtgraph==0.14.0

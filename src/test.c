@@ -206,6 +206,18 @@ void* tcp_server_thread(void* arg) {
                 motor_enable(&g_motor[1], 0);
                 printf("Motor disabled\n");
             }
+            else if (strncmp(buffer, "SET_MAX_TORQUE", 14) == 0) {
+                float max_torque = atof(buffer + 15);
+                g_motor[0].param.max_torque = max_torque;
+                g_motor[1].param.max_torque = max_torque;
+                printf("Set max torque: %.2f\n", max_torque);
+                
+                // 发送确认消息
+                char result[256];
+                snprintf(result, sizeof(result), "MAX_TORQUE_SET %.2f\n", max_torque);
+                send(client_socket, result, strlen(result), 0);
+            }
+
         }
     }
     
@@ -348,7 +360,6 @@ void *commu_thread(void *arg)
         for (size_t i = 0; i < MOTOR_NUM; i++)
         {
             motor_mit *motor = &tmp[i];
-
             if (motor->protocol == 0)
             {
                 // pthread_spin_lock(&motor->lock);
