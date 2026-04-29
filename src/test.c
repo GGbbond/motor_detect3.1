@@ -475,9 +475,11 @@ void *commu_thread(void *arg)
         // 发送状态数据到客户端
         if (client_fd > 0) {
             char msg[256];
-            snprintf(msg, sizeof(msg), "TORQUE %.2f\nPOS %.2f\n", 
+            snprintf(msg, sizeof(msg), "TORQUE1 %.2f\nPOS1 %.2f\nTORQUE2 %.2f\nPOS2 %.2f\n", 
                     g_motor[0].state.t, 
-                    g_motor[0].state.p / 3.1415926f * 180.0f); // 弧度转角度
+                    g_motor[0].state.p / 3.1415926f * 180.0f,  // 弧度转角度
+                    g_motor[1].state.t,
+                    g_motor[1].state.p / 3.1415926f * 180.0f); // 弧度转角度
             send(client_fd, msg, strlen(msg), 0);
             usleep(1000*10);
         }
@@ -515,7 +517,7 @@ int motor_test_init()
     g_motor[1].control.kp = 0.0;
     g_motor[1].control.kd = 0.0;
     g_motor[1].pid.kp = 0.5;
-    g_motor[1].pid.ki = 0.1;
+    g_motor[1].pid.ki = 0.0;
     g_motor[1].pid.output_max = 40.0;
     g_motor[1].pid.error_all_max = g_motor[1].pid.output_max / g_motor[1].pid.ki;
     g_motor[1].pid.error_max = 4.0;
@@ -1112,65 +1114,6 @@ int dir_test2(int argc, char *argv[])
 }
 FINSH_FUNCTION_EXPORT(dir_test2, dir_test2);
 
-
-// int position_with_torque(int argc, char *argv[])
-// {
-//     float target_pos = 0.0f;  // 目标位置（角度）
-//     float torque = 0.0f;      // 输出力矩（Nm）
-    
-//     // 从命令行获取参数
-//     if (argc >= 2) target_pos = atof(argv[1]);
-//     if (argc >= 3) torque = atof(argv[2]);
-//     //角度转弧度
-//     target_pos = target_pos / 180.0f * 3.1415926f;
-    
-//     // 设置协议0模式
-//     g_motor[0].protocol = 0;
-    
-//     // 配置MIT协议控制参数
-//     g_motor[0].control.kp = 200.0;  // 位置比例增益
-//     g_motor[0].control.kd = 0.0;  // 速度阻尼增益
-    
-//     // 使能电机
-//     motor_enable(&g_motor[0], 1);
-    
-    
-//     // // 设置输出力矩
-//     g_motor[0].control.t_ff = torque;
-    
-//     // 设置目标位置
-//     g_motor[0].control.p_des = target_pos;
-
-    
-
-//     printf("Position: %.3f rad, Torque: %.3f Nm\n", target_pos, torque);
-    
-//     //如果电机力矩改变，打印力矩值
-//     float last_pos = 0.0f;
-//     while (!kbhit()) {
-//         if (kbhit())
-//             break;  
-//         if (fabs(g_motor[0].state.p - last_pos) > 0.01) { // 位置变化超过0.01rad时打印
-//             printf("p_des: %.3f, Current Position: %.3f, Torque: %.3f, Curent_Torque: %.3f\n", 
-//                    g_motor[0].control.p_des / 3.1415926f * 180.0f, g_motor[0].state.p / 3.1415926f * 180.0f, g_motor[0].control.t_ff, g_motor[0].state.t);
-//             last_pos = g_motor[0].state.p;
-//         }
-//         usleep(1000 * 100); // 每100ms检查一次
-//     }
-//     motor_enable( &g_motor[0], 0);
-
-//     return 0;
-// }
-// FINSH_FUNCTION_EXPORT(position_with_torque, position_with_torque);
-
-// int pid(int argc, char *argv[])
-// {
-//     g_motor[0].pid.kp = atof(argv[2]);  // 动态设置Kp
-//     g_motor[0].pid.ki = atof(argv[3]);  // 动态设置Ki
-//     // ...
-// }
-// FINSH_FUNCTION_EXPORT(pid, pid);
-
 int position_with_velocity(int argc, char *argv[])
 {
     float target_pos = 0.0f;  // 目标位置（角度）
@@ -1265,3 +1208,64 @@ int position_with_velocity(int argc, char *argv[])
     return 0;
 }
 FINSH_FUNCTION_EXPORT(position_with_velocity, position_with_velocity);
+
+
+int drag_test(int argc, char *argv[])
+{
+    float torque,speed,power;
+    float KT = 0.07f;
+    float GR = (7056.f/361.f);
+    float target_current = -5.0f;
+
+    if (argc == 2) {
+        target_current = atof(argv[1]);
+    }
+    printf("target current: %.3f\n", target_current);
+
+    system("mkdir -p ../data");
+    
+    FILE *file = fopen("../data/current_torque.csv", "w");
+
+    if(!file)
+    {
+        printf("open file failed\n");
+    }
+
+    g_motor[1].protocol = 2;
+
+    motor_enable( &g_motor[0], 1);
+    motor_enable( &g_motor[1], 1);
+
+    g_motor[1].pid.des = 5.0f;   // 根据电机相对方向修改，若反向则为正，同向则为负
+    usleep(1000*200);
+ 
+    printf("current, torque\n");
+
+    float current = 0;
+    int times = 1000 * 2;
+    for (int i = 0; i < times; i++)
+    {
+        current += (target_current * 2.0f / times * (i >= (times/2) ? -1 : 1));
+        set_motor_tor(&g_motor[0], current);
+        usleep(1000*10);
+        get_dy200_info(&torque, &speed, &power);
+        if(i <= (times/2) && i >=50){
+            printf("%.3f, %.3f\n", current, torque);  // 修改扭矩正负输出，前面的系数根据扭矩输出修改
+            if(file){
+                fprintf(file, "%.3f, %.3f\n", current, torque);
+            }
+        }
+    }
+
+    motor_enable( &g_motor[0], 0);
+    motor_enable( &g_motor[1], 0);
+
+    g_motor[1].pid.des = 0.0f;
+
+    g_motor[1].protocol = 0;
+
+    fclose(file);
+
+    return 0;
+}
+FINSH_FUNCTION_EXPORT(drag_test, drag_test);

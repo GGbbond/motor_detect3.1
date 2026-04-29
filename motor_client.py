@@ -40,13 +40,15 @@ class MotorControlApp(QMainWindow):
         self.control_target_pos = 0.0  # 发送给电机的当前位置目标值（可按需保持不变）
         self.pos_vel_pos_input = 0.0  # 位置与速度控制输入的增量
         self.target_vel = 0.0
-        self.current_torque_val = 0.0
-        self.current_vel_val = 0.0
-        self.current_pos_val = 0.0
+        self.current_torque_val1 = 0.0
+        self.current_vel_val1 = 0.0
+        self.current_pos_val1 = 0.0
+        self.current_torque_val2 = 0.0
+        self.current_vel_val2 = 0.0
+        self.current_pos_val2 = 0.0
         self.last_pos_val = 0.0
         self.max_torque = 0.0
         self.actual_torque_val = 0.0
-        self.pos_offset = 0.0  # 位置偏移，用于归零
         self.data_length = 260  # 26 seconds at 100ms update interval
         self.time_axis = np.linspace(-26.0, 0.0, self.data_length)
         self.torque_data = np.zeros(self.data_length)
@@ -108,36 +110,6 @@ class MotorControlApp(QMainWindow):
         connection_layout.addWidget(self.lbl_status, 1, 0)
         connection_group.setLayout(connection_layout)
         control_layout.addWidget(connection_group)
-        
-        # # 位置与速度控制
-        # pos_vel_group = QGroupBox("位置与速度控制")
-        # pos_vel_layout = QGridLayout()
-
-        # self.spin_pos_vel_pos = QDoubleSpinBox()
-        # self.spin_pos_vel_pos.setRange(-360.0, 360.0)
-        # self.spin_pos_vel_pos.setSingleStep(1.0)
-        # self.spin_pos_vel_pos.setValue(0.0)
-        # self.spin_pos_vel_pos.setStyleSheet("color: white;")
-        # self.spin_pos_vel_pos.valueChanged.connect(self.update_target_pos_from_pos_vel)
-
-        # self.spin_pos_vel_velocity = QDoubleSpinBox() 
-        # self.spin_pos_vel_velocity.setRange(0.0, 90.0)
-        # self.spin_pos_vel_velocity.setSingleStep(0.1)
-        # self.spin_pos_vel_velocity.setValue(1.0)
-        # self.spin_pos_vel_velocity.setStyleSheet("color: white;")
-
-        # self.btn_pos_vel = QPushButton("执行位置与速度控制")
-        # self.btn_pos_vel.setStyleSheet("background-color: #9C27B0; color: white; font-size: 12px; padding: 5px;")
-        # self.btn_pos_vel.clicked.connect(self.on_pos_vel_clicked)
-
-        # pos_vel_layout.addWidget(QLabel("目标位置 (deg):"), 0, 0)
-        # pos_vel_layout.addWidget(self.spin_pos_vel_pos, 0, 1)
-        # pos_vel_layout.addWidget(QLabel("目标速度 (deg/s):"), 1, 0)
-        # pos_vel_layout.addWidget(self.spin_pos_vel_velocity, 1, 1)
-        # pos_vel_layout.addWidget(self.btn_pos_vel, 2, 0, 1, 2)
-
-        # pos_vel_group.setLayout(pos_vel_layout)
-        # control_layout.addWidget(pos_vel_group)
         
         # 实时数据显示
         data_group = QGroupBox("实时数据")
@@ -461,7 +433,7 @@ class MotorControlApp(QMainWindow):
         self.set_zero_position()
 
         #如果电机位置绝对值大于一度，退出程序
-        if abs(self.current_pos_val) > 1.0:
+        if abs(self.current_pos_val1) > 1.0:
             print("电机位置未置零，测试中止")
             return
         
@@ -527,19 +499,32 @@ class MotorControlApp(QMainWindow):
                     
                     lines = data.split('\n')
                     for line in lines:
-                        if line.startswith("TORQUE"):
+                        if line.startswith("TORQUE1"):
                             parts = line.split()
                             if len(parts) == 2:
                                 val = float(parts[1])
-                                self.current_torque_val = val
+                                self.current_torque_val1 = val
                                 # 更新最大扭矩
                                 if abs(val) > self.max_torque:
                                     self.max_torque = abs(val)
-                        elif line.startswith("POS"):
+                        elif line.startswith("POS1"):
                             parts = line.split()
                             if len(parts) == 2:
                                 val = float(parts[1])
-                                self.current_pos_val = val - self.pos_offset
+                                self.current_pos_val1 = val
+                        elif line.startswith("TORQUE2"):
+                            parts = line.split()
+                            if len(parts) == 2:
+                                val = float(parts[1])
+                                self.current_torque_val2 = val
+                                # 更新最大扭矩
+                                if abs(val) > self.max_torque:
+                                    self.max_torque = abs(val)
+                        elif line.startswith("POS2"):
+                            parts = line.split()
+                            if len(parts) == 2:
+                                val = float(parts[1])
+                                self.current_pos_val2 = val
                         elif line.startswith("POS_WITH_VEL_COMPLETE"):
                             print("Position with velocity command completed")
                             self.target_vel = 0.0  # 目标速度归零
@@ -579,21 +564,21 @@ class MotorControlApp(QMainWindow):
         if self.is_connected:
             # 更新数据数组
             self.torque_data = np.roll(self.torque_data, -1)
-            self.torque_data[-1] = self.current_torque_val
+            self.torque_data[-1] = self.current_torque_val1
             
             self.target_torque_data = np.roll(self.target_torque_data, -1)
             self.target_torque_data[-1] = self.target_torque
             
             self.pos_data = np.roll(self.pos_data, -1)
-            self.pos_data[-1] = self.current_pos_val
+            self.pos_data[-1] = self.current_pos_val1
 
             self.spin_dumbell_weight.setValue(self.m_dumbell)
             self.spin_arm_length.setValue(self.L) 
 
             # 计算速度（deg/s）
             dt = 0.1  # update_data 每100ms调用一次
-            self.current_vel_val = abs((self.current_pos_val - self.last_pos_val) / dt) #当前速度的绝对值
-            self.last_pos_val = self.current_pos_val
+            self.current_vel_val = abs((self.current_pos_val1 - self.last_pos_val) / dt) #当前速度的绝对值
+            self.last_pos_val = self.current_pos_val1
             self.vel_data = np.roll(self.vel_data, -1)
             self.vel_data[-1] = self.current_vel_val
 
@@ -605,7 +590,7 @@ class MotorControlApp(QMainWindow):
             
             self.actual_torque_data = np.roll(self.actual_torque_data, -1)
             # 计算实际扭矩：考虑哑铃和摆臂重量的重力扭矩
-            theta_rad = self.current_pos_val * np.pi / 180  # 角度转弧度
+            theta_rad = self.current_pos_val1 * np.pi / 180  # 角度转弧度
             self.actual_torque_val = (self.m_dumbell * self.L + self.m_arm * 0.5 / 2) * self.g * np.sin(theta_rad)
             self.actual_torque_data[-1] = self.actual_torque_val
             
@@ -619,9 +604,9 @@ class MotorControlApp(QMainWindow):
             self.curve_actual_torque.setData(self.time_axis, self.actual_torque_data)
             
             # 更新标签
-            self.lbl_torque.setText(f"电机反馈扭矩: {self.current_torque_val:.2f} N·m")
-            self.lbl_target_torque.setText(f"目标电机反馈扭矩: {self.target_torque:.2f} N·m")
-            self.lbl_pos.setText(f"当前位置: {self.current_pos_val:.2f} deg")
+            self.lbl_torque.setText(f"电机1反馈扭矩: {self.current_torque_val1:.2f} N·m")
+            self.lbl_target_torque.setText(f"目标电机1反馈扭矩: {self.target_torque:.2f} N·m")
+            self.lbl_pos.setText(f"当前位置: {self.current_pos_val1:.2f} deg")
             self.lbl_target_pos.setText(f"目标位置: {self.target_pos:.2f} deg")
             self.lbl_vel.setText(f"当前速度: {self.current_vel_val:.2f} deg/s")
             self.lbl_target_vel.setText(f"目标速度: {self.target_vel:.2f} deg/s")
@@ -641,12 +626,10 @@ class MotorControlApp(QMainWindow):
             except Exception as e:
                 print(f"发送零位命令失败: {e}")
                 self.disconnect()
-        # self.pos_offset = self.current_pos_val + self.pos_offset  # 累加偏移
-        # self.current_pos_val = 0.0
         self.target_pos = 0.0  # 目标位置也归零
         self.pos_data = np.zeros(self.data_length)
         self.target_pos_data = np.zeros(self.data_length)
-        self.lbl_pos.setText(f"当前位置: {self.current_pos_val:.2f} deg")
+        self.lbl_pos.setText(f"当前位置: {self.current_pos_val1:.2f} deg")
         self.lbl_target_pos.setText(f"目标位置: {self.target_pos:.2f} deg")
         
     def update_dumbell_weight(self, value):
